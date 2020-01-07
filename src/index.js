@@ -5,11 +5,7 @@ const myEmitter = new MyEmitter();
 const logger = require('./Logger')
 
 let main = async () => {
-	logger.log({
-		level: 'info', message: 'main open', meta: [], callback: (e) => {
-			console.log(e);
-		}
-	})
+	logger.log('info', 'main open')
 
 	myEmitter.on('param', (a, b) => {
 		logger.info('an event occurred!' + a + b);
