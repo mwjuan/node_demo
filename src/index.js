@@ -8,11 +8,11 @@ let main = async () => {
 	logger.log('info', 'main open')
 
 	myEmitter.on('param', (a, b) => {
-		logger.info('an event occurred!' + a + b);
+		logger.log('info', 'an event occurred!' + a + b);
 	});
 
 	myEmitter.on('event', () => {
-		logger.info('an event no param occurred!');
+		logger.log('info', 'an event no param occurred!');
 	})
 
 	myEmitter.push(1, 2);
@@ -24,7 +24,7 @@ let main = async () => {
 
 process.on('SIGINT', function () {
 	app.close();
-	logger.info('main closed');
+	logger.log('info', 'main closed');
 });
 
 main();

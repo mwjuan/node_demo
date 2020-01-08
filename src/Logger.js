@@ -33,26 +33,6 @@ class Logger {
 			log.call(this, ...arguments, that.getCallerInfo(2));
 		}
 
-		let debug = child.debug;
-		child.debug = function () {
-			debug.call(this, ...arguments, that.getCallerInfo(2));
-		}
-
-		let info = child.info;
-		child.info = function () {
-			info.call(this, ...arguments, that.getCallerInfo(2));
-		}
-
-		let warn = child.warn;
-		child.warn = function () {
-			warn.call(this, ...arguments, that.getCallerInfo(2));
-		}
-
-		let error = child.error;
-		child.error = function () {
-			error.call(this, ...arguments, that.getCallerInfo(2));
-		}
-
 		return child;
 	}
 
@@ -110,24 +90,15 @@ class Logger {
 		}
 	}
 
-	log(...args) {
+	log(level, msg) {
+		let args = [level];
+		if (typeof msg === 'object') {
+			if (msg.message) args.push(''); args.push(msg)
+		} else {
+			args.push(msg)
+		}
+
 		this.logger.log(...args, this.getCallerInfo(2));
-	}
-
-	debug(...args) {
-		this.logger.debug(...args, this.getCallerInfo(2));
-	}
-
-	info(...args) {
-		this.logger.info(...args, this.getCallerInfo(2));
-	}
-
-	warn(...args) {
-		this.logger.warn(...args, this.getCallerInfo(2));
-	}
-
-	error(...args) {
-		this.logger.error(...args, this.getCallerInfo(2));
 	}
 
 	getCallerInfo(level) {

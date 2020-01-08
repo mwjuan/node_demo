@@ -6,10 +6,10 @@ module.exports = (logger) => {
 
 		ctx.logger = child;
 
-		ctx.logger.info(`${chalk.gray('<--')} ${chalk.bold(ctx.method)} ${chalk.gray(ctx.originalUrl)}`);
+		ctx.logger.log('info', `${chalk.gray('<--')} ${chalk.bold(ctx.method)} ${chalk.gray(ctx.originalUrl)}`);
 
 		await next();
 
-		ctx.logger.info(`${chalk.gray('-->')} ${chalk.bold(ctx.method)} ${chalk.gray(ctx.originalUrl)} ${chalk.bold(ctx.status)}`);
+		ctx.logger.log('info', `${chalk.gray('-->')} ${chalk.bold(ctx.method)} ${chalk.gray(ctx.originalUrl)} ${chalk.bold(ctx.status)}`);
 	}
 }
