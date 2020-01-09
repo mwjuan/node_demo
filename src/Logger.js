@@ -6,39 +6,62 @@ const stackTrace = require('stack-trace');
 const strip = require('strip-color');
 const { createLogger, format, transports } = require('winston');
 require('winston-daily-rotate-file');
-const debug = require('debug')('app')
 
 class Logger {
-	static get instance() {
-		if (!this._instance) {
-			this._instance = new Logger();
-		}
-		return this._instance;
-	}
-
 	constructor() {
-		if (Logger._instance) {
-			return Logger._instance;
-		}
-
+		this.name = 'node logger';
 		this.init();
 	}
 
 	child(options) {
 		let child = this.logger.child(options);
-
-		let that = this;
-		let log = child.log;
-		child.log = function () {
-			log.call(this, ...arguments, that.getCallerInfo(2));
-		}
-
+		Object.keys(this.logger.levels).forEach(level => {
+			if (level !== 'log') {
+				child[level] = (...args) => {
+					return child.log(level, ...args);
+				};
+			}
+		});
 		return child;
 	}
 
-	getLabel(callingModule) {
-		const parts = callingModule.filename.split(path.sep);
-		return path.join(parts[parts.length - 2], parts.pop());
+	log(level, msg, ...splat) {
+		let args = [level];
+
+		if (msg && typeof msg === 'object') {
+			if (msg.message) {
+				args.push('');
+			}
+		}
+		args.push(msg);
+
+		return this._log(args, splat);
+	}
+
+	_log(args, ...splat) {
+		return this.logger.log(...args, ...splat, this.getCallerInfo());
+	}
+
+	getCallerInfo() {
+		let level = stackTrace.get().length;
+		let frame;
+		for (let i = 0; i < level; ++i) {
+			let current = stackTrace.get()[i];
+			if (__filename != current.getFileName()) {
+				frame = current;
+				break;
+			}
+		}
+
+		if (frame) {
+			let filename = frame.getFileName();
+			let base = path.dirname(require.main.filename);
+			filename = filename.replace(base, '').slice(1);
+			let line = frame.getLineNumber();
+			return { filename, line };
+		}
+
+		return null;
 	}
 
 	init() {
@@ -78,7 +101,12 @@ class Logger {
 				format: format.combine(
 					format.colorize(),
 					format.printf(info => {
-						let content = (info.requestId ? `[req_id: ${info.requestId}]` : '') + `${moment.unix(info.timestamp).format("HH:mm")} ${info.level} [${info.filename}:${info.line}]: ${info.message}`;
+						let content;
+						if (info.filename && info.line) {
+							content = (info.requestId ? `[req_id: ${info.requestId}]` : '') + `${moment.unix(info.timestamp).format("HH:mm")} ${info.level} [${info.filename}:${info.line}]: ${info.message}`;
+						} else {
+							content = (info.requestId ? `[req_id: ${info.requestId}]` : '') + `${moment.unix(info.timestamp).format("HH:mm")} ${info.level}: ${info.message}`;
+						}
 						let base = path.dirname(path.dirname(require.main.filename)) + '/';
 						if (info.stack) {
 							content += '\n' + info.stack.split(base).join("");
@@ -88,49 +116,16 @@ class Logger {
 				)
 			}));
 		}
-	}
 
-	log(level, msg) {
-		let args = [level];
-		if (typeof msg === 'object') {
-			if (msg.message) args.push(''); args.push(msg)
-		} else {
-			args.push(msg)
-		}
-
-		this.logger.log(...args, this.getCallerInfo(2));
-	}
-
-	getCallerInfo(level) {
-		let p = stackTrace.get()[level];
-		let filename = p.getFileName();
-		let base = path.dirname(require.main.filename);
-		filename = filename.replace(base, '').slice(1);
-		let line = p.getLineNumber();
-		return { filename, line }
-	}
-
-	async query() {
-		const options = {
-			from: moment().subtract(1, 'hours').unix(),
-			until: moment().unix(),
-			limit: 10000,
-			start: 0,
-		};
-
-		return new Promise((resolve, reject) => {
-			this.logger.query(options, function (err, results) {
-				if (err) {
-					reject();
-				}
-				resolve(results.dailyRotateFile);
-			});
+		// 按上debug, info, warn, error handler
+		Object.keys(this.logger.levels).forEach(level => {
+			if (level !== 'log') {
+				this[level] = (...args) => {
+					return this.log(level, ...args);
+				};
+			}
 		});
-	}
-
-	getWinstonLogger() {
-		return this.logger;
 	}
 }
 
-module.exports = Logger.instance;
+module.exports = Logger;
